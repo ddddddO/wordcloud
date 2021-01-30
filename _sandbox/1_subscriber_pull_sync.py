@@ -1,4 +1,6 @@
 from google.cloud import pubsub
+from io import BytesIO
+from PIL import Image
 
 project_id = "test-emu-555"
 topic_name = "my_topic"
@@ -20,8 +22,11 @@ response = subscriber.pull(
 print("block....")
 
 for msg in response.received_messages:
-    #print("Received message:", msg.message.data)
-    print("Received message:", msg.message)
+    # print("Received message:", msg.message.data)
+    # print("Received message:", msg.message)
+
+    img = Image.open(BytesIO(msg.message.data))
+    img.save('published_wordcloud.png')
 
 print("pass")
 
