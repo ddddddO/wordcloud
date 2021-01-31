@@ -1,0 +1,2 @@
+gen:
+	python3 main.py | go run main.go > genereted.png
