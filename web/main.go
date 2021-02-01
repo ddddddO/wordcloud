@@ -68,12 +68,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// TODO:
-		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicを作成する。
+		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicを作成する。 <- PubSubをCloud Functionsのトリガーにするには、予めTopicが無いとダメっぽい。terraformで生成する。
 		// 2. サブスクライブしたテキストデータから生成されるWordCloudイメージデータ(CloudFunctions(Python)の処理)、のパブリッシュ先のTopicを作成する。
 		// 3. WordCloudイメージデータをPullする先のSubscriptionを作成する。
 		// 4. 1で作成したTopicに対してテキストデータをパブリッシュ
 		// 5. 3で作成したSubscriptionからWordCloudイメージデータを同期Pullする処理
-		// 6. 5の終了後、1・2で作成したTopic/3で作成したSubscriptionを削除する
+		// 6. 5の終了後、2で作成したTopic/3で作成したSubscriptionを削除する
 		// 7. レスポンスにWordCloudイメージを返却
 
 		tmp := &struct {
