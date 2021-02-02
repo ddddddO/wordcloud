@@ -68,8 +68,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// TODO:
-		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicを作成する。 <- PubSubをCloud Functionsのトリガーにするには、予めTopicが無いとダメっぽい。terraformで生成する。
-		// 2. サブスクライブしたテキストデータから生成されるWordCloudイメージデータ(CloudFunctions(Python)の処理)、のパブリッシュ先のTopicを作成する。
+		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicと受信しpushするSubscriptionをterraformから作成する。こちらまず読んでから実装-> https://cloud.google.com/run/docs/triggering/pubsub-push?hl=ja#run_pubsub_handler-python
+		// 2. サブスクライブしたテキストデータから生成されるWordCloudイメージデータ(CloudRun(Python)の処理)、のパブリッシュ先のTopicを作成する。
 		// 3. WordCloudイメージデータをPullする先のSubscriptionを作成する。
 		// 4. 1で作成したTopicに対してテキストデータをパブリッシュ
 		// 5. 3で作成したSubscriptionからWordCloudイメージデータを同期Pullする処理
