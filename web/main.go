@@ -1,16 +1,21 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/ddddddO/extxt"
+	// "github.com/ddddddO/extxt"
 	tmpl "github.com/ddddddO/wordcloud/web/templates"
+
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -30,7 +35,13 @@ func runServer() error {
 	return nil
 }
 
-const src = "src_file"
+const (
+	src                       = "src_file"
+	projectID                 = "wordcloud-304009"
+	topicTxtName              = "receive-text-topic"
+	topicWordCloudName        = "receive-word-cloud-topic"
+	subscriptionWordCloudName = "pull-word-cloud-subscription"
+)
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if !basicAuthenticated(r) {
@@ -60,12 +71,74 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = header
+		_ = f
 
-		buf := &bytes.Buffer{}
-		if err := extxt.RunByServer(buf, f); err != nil {
+		ctx := context.Background()
+		pubsubClient, err := pubsub.NewClient(ctx, projectID)
+		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Printf("pubsub.NewClient: %v", err)
 			return
 		}
+
+		wordCloudTopic, err := pubsubClient.CreateTopic(ctx, topicWordCloudName)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Printf("pubsub.CreateTopic: %v", err)
+			return
+		}
+		defer wordCloudTopic.Delete(ctx)
+
+		wordCloudSub, err := pubsubClient.CreateSubscription(ctx, subscriptionWordCloudName, pubsub.SubscriptionConfig{Topic: wordCloudTopic})
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			log.Printf("pubsub.CreateSubscription: %v", err)
+			return
+		}
+		defer wordCloudSub.Delete(ctx)
+
+		// Turn on synchronous mode. This makes the subscriber use the Pull RPC rather
+		// than the StreamingPull RPC, which is useful for guaranteeing MaxOutstandingMessages,
+		// the max number of messages the client will hold in memory at a time.
+		wordCloudSub.ReceiveSettings.Synchronous = true
+		wordCloudSub.ReceiveSettings.MaxOutstandingMessages = 10
+
+		// Receive messages for 20 seconds.
+		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+
+		// Create a channel to handle messages to as they come in.
+		cm := make(chan *pubsub.Message)
+		defer close(cm)
+		// Handle individual messages in a goroutine.
+		go func() {
+			for msg := range cm {
+				fmt.Printf("Got message :%q\n", string(msg.Data))
+				msg.Ack()
+			}
+		}()
+
+		txtTopic := pubsubClient.Topic(topicTxtName)
+		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte("to py!!!")})
+		if _, err := res.Get(r.Context()); err != nil {
+			log.Printf("Publish.Get: %v", err)
+			http.Error(w, "Error requesting translation", http.StatusInternalServerError)
+			return
+		}
+
+		// Receive blocks until the passed in context is done.
+		err = wordCloudSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+			cm <- msg
+		})
+		if err != nil && status.Code(err) != codes.Canceled {
+			fmt.Errorf("Receive: %v", err)
+		}
+
+		// buf := &bytes.Buffer{}
+		// if err := extxt.RunByServer(buf, f); err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		// TODO:
 		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicと受信しpushするSubscriptionをterraformから作成する。こちらまず読んでから実装-> https://cloud.google.com/run/docs/triggering/pubsub-push?hl=ja#run_pubsub_handler-python
@@ -81,16 +154,20 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			Words []string `json:"Words"`
 		}{}
 
-		if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		// if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
 		if err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+
+		// debug
+		tmp.Text = "succeeded!"
+		tmp.Words = []string{"aa", "ssd"}
 
 		if err := t.Execute(w, tmp); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
