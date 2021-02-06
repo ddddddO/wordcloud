@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html/template"
+	"image"
+	"image/png"
 	"log"
 	"net/http"
 	"os"
@@ -111,12 +114,27 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		cm := make(chan *pubsub.Message)
 		defer close(cm)
 		// Handle individual messages in a goroutine.
-		go func() {
+		go func(w http.ResponseWriter) {
 			for msg := range cm {
-				fmt.Printf("Got message :%q\n", string(msg.Data))
+				fmt.Printf("Got message\n")
+
+				reader := bytes.NewReader(msg.Data)
+				img, _, err := image.Decode(reader)
+				if err != nil {
+					http.Error(w, "Internal server error", http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-type", "image/png")
+				err = png.Encode(w, img)
+				if err != nil {
+					http.Error(w, "Internal server error", http.StatusInternalServerError)
+					return
+				}
+
 				msg.Ack()
 			}
-		}()
+		}(w)
 
 		txtTopic := pubsubClient.Topic(topicTxtName)
 		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte("to py!!!")})
@@ -132,6 +150,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil && status.Code(err) != codes.Canceled {
 			fmt.Errorf("Receive: %v", err)
+			http.Error(w, "Error requesting translation", http.StatusInternalServerError)
+			return
 		}
 
 		// buf := &bytes.Buffer{}
@@ -149,30 +169,30 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		// 6. 5の終了後、2で作成したTopic/3で作成したSubscriptionを削除する
 		// 7. レスポンスにWordCloudイメージを返却
 
-		tmp := &struct {
-			Text  string   `json:"Text"`
-			Words []string `json:"Words"`
-		}{}
+		// tmp := &struct {
+		// 	Text  string   `json:"Text"`
+		// 	Words []string `json:"Words"`
+		// }{}
 
 		// if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
 		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
 		// 	return
 		// }
 
-		t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		// t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
+		// if err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		// debug
-		tmp.Text = "succeeded!"
-		tmp.Words = []string{"aa", "ssd"}
+		// tmp.Text = "succeeded!"
+		// tmp.Words = []string{"aa", "ssd"}
 
-		if err := t.Execute(w, tmp); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		// if err := t.Execute(w, tmp); err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		return
 	}
