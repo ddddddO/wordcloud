@@ -8,8 +8,11 @@ ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY ./app ./
 
-# Install production dependencies.
-RUN pip install Flask gunicorn google-cloud-pubsub
+RUN apt-get update && \
+    apt-get install fonts-takao-gothic && \
+    pip install Flask gunicorn google-cloud-pubsub wordcloud
+
+ENV FONT_PATH=/usr/share/fonts/truetype/fonts-japanese-gothic.ttf
 
 # Run the web service on container startup. Here we use the gunicorn
 # webserver, with one worker process and 8 threads.

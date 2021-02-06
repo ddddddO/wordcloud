@@ -6,11 +6,11 @@ build_app:
 build_web:
 	gcloud builds submit --config web/cloudbuild.yaml
 
-# NOTE: 18 選択
+# NOTE: [18] us-central1 選択
 deploy_app: build_app
 	gcloud run deploy --image gcr.io/wordcloud-304009/gen-wordcloud --platform managed
 
-# NOTE: 18 選択
+# NOTE: [18] us-central1 選択
 deploy_web: build_web
 	gcloud run deploy --image gcr.io/wordcloud-304009/web --platform managed
 
