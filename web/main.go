@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"image"
@@ -13,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/ddddddO/extxt"
+	"github.com/ddddddO/extxt"
 	tmpl "github.com/ddddddO/wordcloud/web/templates"
 
 	"cloud.google.com/go/pubsub"
@@ -46,6 +47,15 @@ const (
 	subscriptionWordCloudName = "pull-word-cloud-subscription"
 )
 
+// NOTE:
+// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicと受信しpushするSubscriptionをterraformから作成する。こちらまず読んでから実装-> https://cloud.google.com/run/docs/triggering/pubsub-push?hl=ja#run_pubsub_handler-python
+// 2. サブスクライブしたテキストデータから生成されるWordCloudイメージデータ(CloudRun(Python)の処理)、のパブリッシュ先のTopicを作成する。
+// 3. WordCloudイメージデータをPullする先のSubscriptionを作成する。
+// 4. 1で作成したTopicに対してテキストデータをパブリッシュ
+// 5. 3で作成したSubscriptionからWordCloudイメージデータを同期Pullする処理
+// 6. 5の終了後、2で作成したTopic/3で作成したSubscriptionを削除する
+// 7. レスポンスにWordCloudイメージを返却
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if !basicAuthenticated(r) {
 		w.Header().Add("WWW-Authenticate", `Basic realm="secret xxxx"`)
@@ -74,7 +84,33 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = header
-		_ = f
+
+		buf := &bytes.Buffer{}
+		if err := extxt.RunByServer(buf, f); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		tmp := &struct {
+			Text  string   `json:"Text"`
+			Words []string `json:"Words"`
+		}{}
+
+		if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		// t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
+		// if err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
+
+		// if err := t.Execute(w, tmp); err != nil {
+		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		ctx := context.Background()
 		pubsubClient, err := pubsub.NewClient(ctx, projectID)
@@ -104,7 +140,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		// than the StreamingPull RPC, which is useful for guaranteeing MaxOutstandingMessages,
 		// the max number of messages the client will hold in memory at a time.
 		wordCloudSub.ReceiveSettings.Synchronous = true
-		wordCloudSub.ReceiveSettings.MaxOutstandingMessages = 10
+		wordCloudSub.ReceiveSettings.MaxOutstandingMessages = 1
 
 		// Receive messages for 20 seconds.
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -137,7 +173,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		}(w)
 
 		txtTopic := pubsubClient.Topic(topicTxtName)
-		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte("to py!!!")})
+		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte(tmp.Text)})
 		if _, err := res.Get(r.Context()); err != nil {
 			log.Printf("Publish.Get: %v", err)
 			http.Error(w, "Error requesting translation", http.StatusInternalServerError)
@@ -153,46 +189,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error requesting translation", http.StatusInternalServerError)
 			return
 		}
-
-		// buf := &bytes.Buffer{}
-		// if err := extxt.RunByServer(buf, f); err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// TODO:
-		// 1. ブラウザから入力したテキスト・画像から抽出したテキストをパブリッシュする先のTopicと受信しpushするSubscriptionをterraformから作成する。こちらまず読んでから実装-> https://cloud.google.com/run/docs/triggering/pubsub-push?hl=ja#run_pubsub_handler-python
-		// 2. サブスクライブしたテキストデータから生成されるWordCloudイメージデータ(CloudRun(Python)の処理)、のパブリッシュ先のTopicを作成する。
-		// 3. WordCloudイメージデータをPullする先のSubscriptionを作成する。
-		// 4. 1で作成したTopicに対してテキストデータをパブリッシュ
-		// 5. 3で作成したSubscriptionからWordCloudイメージデータを同期Pullする処理
-		// 6. 5の終了後、2で作成したTopic/3で作成したSubscriptionを削除する
-		// 7. レスポンスにWordCloudイメージを返却
-
-		// tmp := &struct {
-		// 	Text  string   `json:"Text"`
-		// 	Words []string `json:"Words"`
-		// }{}
-
-		// if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
-		// if err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// debug
-		// tmp.Text = "succeeded!"
-		// tmp.Words = []string{"aa", "ssd"}
-
-		// if err := t.Execute(w, tmp); err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
 
 		return
 	}

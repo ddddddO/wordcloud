@@ -10,7 +10,7 @@ from PIL import Image
 from wordcloud import WordCloud
 
 
-def gen_wordcloud():
+def gen_wordcloud(text:str):
     # TODO: エラーハンドリング
     font_path = os.getenv("FONT_PATH")
     print(font_path)
@@ -24,7 +24,6 @@ def gen_wordcloud():
         contour_color="black",
     )
 
-    text = "なお、コンピュータの発達などで、これまで安全だった暗号が解読されるようになることを暗号の危殆化といいます。 NIST SP800-57 では、* 1024 ビットの RSAを新規用途には使わない* 2048 ビットの RSA を新規用途に使うのは2030年まで. 4096 ビットの RSAは 2031 年以降も新規用途に使えるき たいかレいう方針になっています。 第13章で紹介するGnuPG 2.1.4 では、 RSAの鍵長は2048 ビットがデフォルト値です。この章のまとめこの章では、公開鍵暗号と、その代表的実現方法である RSAについて学びました。公開鍵暗号を使えば、鍵配送問題が解決します。公開鍵暗号は、暗号における革命的な発明であり、現在のコンピュータやインターネットで使われている暗号技術は、公開建暗ませんてどット号から大きな恩恵を得ています。対称暗号は、平文を複雑な形に変換して機密性を保ちます。 一方、 公開鍵暗号は数学的に困難な問題を元にして機密性を保ちます。 たとえばRSAでは、大きな数の素因数分解を利用していました。 対称暗号と公開鍵暗号は根本的に異なる発想から生まれているのです。公開鍵暗号によって鍵配送問題は解決しましたが、公開鍵暗号に対してはman-in-the-middle攻撃が可能です。 これを防ぐためには「この公開鍵は正当な受信者の鍵なのか」 という問いに答えられなければなりません。これについては、第9章および第10章で解説します。公開鍵暗号が登場したからといって、対称暗号がなくなるわけではありません。公開暗号の実行スピードは対称暗号のそれよりもはるかに遅いからです。 ですから通常は、 対が暗号と公開鍵略号を組み合わせた通信が行われます。対称暗号によって処理スピードをクプし、公開鍵略号を使って鍵配送問題を解決するのです。 これがハイブリッド暗号システムです。 ハイプリッド暗号システムについては次の章で詳しく紹介します。ににビットRSH151"
     wordcloud.generate(text)
 
     return wordcloud.to_image()
@@ -60,11 +59,11 @@ def index():
 
     pubsub_message = envelope["message"]
 
-    name = "World"
+    text = "World"
     if isinstance(pubsub_message, dict) and "data" in pubsub_message:
-        name = base64.b64decode(pubsub_message["data"]).decode("utf-8").strip()
+        text = base64.b64decode(pubsub_message["data"]).decode("utf-8").strip()
 
-    print(f"Hello {name}!")
+    print(f"Hello {text}!")
 
     PROJECT_ID = "wordcloud-304009"
     TOPIC_WORD_CLOUD_NAME = "receive-word-cloud-topic"
@@ -74,8 +73,7 @@ def index():
         PROJECT_ID,
         TOPIC_WORD_CLOUD_NAME)
 
-    # data = b'to go!!'
-    data = image_to_byte_array(gen_wordcloud())
+    data = image_to_byte_array(gen_wordcloud(text))
     publisher.publish(topic_path, data=data)
 
     return ("", 204)
