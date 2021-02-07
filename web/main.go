@@ -40,7 +40,8 @@ func runServer() error {
 }
 
 const (
-	src                       = "src_file"
+	srcFile                   = "src_file"
+	srcText                   = "src_text"
 	projectID                 = "wordcloud-304009"
 	topicTxtName              = "receive-text-topic"
 	topicWordCloudName        = "receive-word-cloud-topic"
@@ -70,7 +71,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := t.Execute(w, src); err != nil {
+		if err := t.Execute(w, nil); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
@@ -78,27 +79,35 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		f, header, err := r.FormFile(src)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		_ = header
+		postedText := r.FormValue(srcText)
+		text := ""
+		if len(postedText) != 0 {
+			text = postedText
+		} else {
+			f, header, err := r.FormFile(srcFile)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			_ = header
 
-		buf := &bytes.Buffer{}
-		if err := extxt.RunByServer(buf, f); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+			buf := &bytes.Buffer{}
+			if err := extxt.RunByServer(buf, f); err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
 
-		tmp := &struct {
-			Text  string   `json:"Text"`
-			Words []string `json:"Words"`
-		}{}
+			tmp := &struct {
+				Text  string   `json:"Text"`
+				Words []string `json:"Words"`
+			}{}
 
-		if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
+			if err := json.Unmarshal(buf.Bytes(), tmp); err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			text = tmp.Text
 		}
 
 		ctx := context.Background()
@@ -162,7 +171,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		}(w)
 
 		txtTopic := pubsubClient.Topic(topicTxtName)
-		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte(tmp.Text)})
+		res := txtTopic.Publish(r.Context(), &pubsub.Message{Data: []byte(text)})
 		if _, err := res.Get(r.Context()); err != nil {
 			log.Printf("Publish.Get: %v", err)
 			http.Error(w, "Error requesting translation", http.StatusInternalServerError)
