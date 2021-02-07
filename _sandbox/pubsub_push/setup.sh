@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# NOTE: 選択肢は、すべて[18] us-central1　を選択した。
+
 export CLOUDSDK_PYTHON=/usr/bin/python
 
 # pubsubでメッセージを受信するCloudRunをデプロイする。
@@ -11,7 +13,7 @@ export CLOUDSDK_PYTHON=/usr/bin/python
 
 # # # project切り替え
 PROJECT_ID="wordcloud-304009"
-# gcloud config set project ${PROJECT_ID}
+gcloud config set project ${PROJECT_ID}
 
 # https://cloud.google.com/run/docs/quickstarts/build-and-deploy?hl=ja#python
 SERVICE="gen-wordcloud"

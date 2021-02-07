@@ -35,7 +35,8 @@ topic_name = "my_topic"
 topic_path = "projects/{project}/topics/{topic}".format(project=project_id, topic=topic_name)
 publish_client = pubsub.PublisherClient()
 
-# publish_client.publish(topic_path, b'This is my message.', foo='bar', buzz='fizz')
-img = gen_wordcloud()
-print("send image...")
-publish_client.publish(topic_path, image_to_byte_array(img))
+publish_client.publish(topic_path, b'This is my message.', foo='bar', buzz='fizz')
+
+# img = gen_wordcloud()
+# print("send image...")
+# publish_client.publish(topic_path, image_to_byte_array(img))

@@ -9,7 +9,7 @@ subscription_name = "my_subscription"
 subscriber = pubsub.SubscriberClient()
 topic_path = "projects/{project}/topics/{topic}".format(project=project_id, topic=topic_name)
 subscription_path = subscriber.subscription_path(project_id, subscription_name)
-#subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
+# subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
 print("block..")
 
 response = subscriber.pull(
@@ -22,11 +22,11 @@ response = subscriber.pull(
 print("block....")
 
 for msg in response.received_messages:
-    # print("Received message:", msg.message.data)
-    # print("Received message:", msg.message)
+    print("Received message:", msg.message.data)
+    print("Received message:", msg.message)
 
-    img = Image.open(BytesIO(msg.message.data))
-    img.save('published_wordcloud.png')
+    # img = Image.open(BytesIO(msg.message.data))
+    # img.save('published_wordcloud.png')
 
 print("pass")
 
