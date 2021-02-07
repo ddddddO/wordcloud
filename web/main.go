@@ -101,17 +101,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// t, err := template.New("extxt").Parse(tmpl.ExtxtHTML)
-		// if err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// if err := t.Execute(w, tmp); err != nil {
-		// 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-		// 	return
-		// }
-
 		ctx := context.Background()
 		pubsubClient, err := pubsub.NewClient(ctx, projectID)
 		if err != nil {
