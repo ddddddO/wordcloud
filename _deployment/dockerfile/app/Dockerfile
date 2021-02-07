@@ -12,6 +12,10 @@ RUN apt-get update && \
     apt-get install fonts-takao-gothic && \
     pip install Flask gunicorn google-cloud-pubsub wordcloud
 
+# mecabインストール
+RUN pip install mecab-python3 && \
+    apt-get install mecab-ipadic-utf8 -y
+
 ENV FONT_PATH=/usr/share/fonts/truetype/fonts-japanese-gothic.ttf
 
 # Run the web service on container startup. Here we use the gunicorn

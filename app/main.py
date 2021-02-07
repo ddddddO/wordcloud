@@ -5,9 +5,17 @@ import base64
 
 from flask import Flask, request
 from google.cloud import pubsub_v1
-#import MeCab
+import MeCab
 from PIL import Image
 from wordcloud import WordCloud
+
+# NOTE: 2021_02_07.ここから。受信したテキストから名詞のみ取り出す。
+#       docker run -it python:3.9-slim bash で必要なものインストールして作業する。
+def parse_noun(text:str):
+    tagger = MeCab.Tagger('-d/var/lib/mecab/dic/debian')
+    text="ある日の暮方の事である。一人の下人げにんが、羅生門らしょうもんの下で雨やみを待>っていた。"
+    parsed=tagger.parse(text).strip()
+    print(parsed)
 
 
 def gen_wordcloud(text:str):
@@ -33,13 +41,6 @@ def image_to_byte_array(image:Image):
     image.save(imgByteArr, format="PNG")
     imgByteArr = imgByteArr.getvalue()
     return imgByteArr
-
-# data = image_to_byte_array(gen_wordcloud())
-# sys.stdout.buffer.write(data)
-
-# f = open("tmp.png", "wb")
-# f.write(image_to_byte_array(gen_wordcloud()))
-# f.close()
 
 app = Flask(__name__)
 publisher = pubsub_v1.PublisherClient()
