@@ -13,7 +13,9 @@ RUN apt-get update && \
     pip install Flask gunicorn google-cloud-pubsub wordcloud
 
 # mecabインストール
-RUN pip install mecab-python3 && \
+## https://pypi.org/project/mecab-python3/
+## NOTE: 辞書はmecab-ipadic-neologdの方がよさそう。
+RUN pip install mecab-python3 unidic-lite && \
     apt-get install mecab-ipadic-utf8 -y
 
 ENV FONT_PATH=/usr/share/fonts/truetype/fonts-japanese-gothic.ttf
