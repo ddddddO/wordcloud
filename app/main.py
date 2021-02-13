@@ -3,25 +3,29 @@ import os
 import sys
 import base64
 
-from flask import Flask, request
-from google.cloud import pubsub_v1
 import MeCab
 from PIL import Image
 from wordcloud import WordCloud
+from flask import Flask, request
+from google.cloud import pubsub_v1
 
-# NOTE: 2021_02_07.ここから。受信したテキストから名詞のみ取り出す。
-#       docker run -it python:3.9-slim bash で必要なものインストールして作業する。
-def parse_noun(text:str):
-    tagger = MeCab.Tagger('-d/var/lib/mecab/dic/debian')
-    text="ある日の暮方の事である。一人の下人げにんが、羅生門らしょうもんの下で雨やみを待>っていた。"
-    parsed=tagger.parse(text).strip()
-    print(parsed)
+def parse_noun(text:str) -> str:
+    tagger = MeCab.Tagger('-d /usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd')
 
+    parsed_nouns=""
+    node = tagger.parseToNode(text)
+    while node:
+        word = node.surface
+        pos = node.feature.split(",")[0]
+        if pos == '名詞':
+            parsed_nouns+=word+","
+
+        node = node.next
+    return parsed_nouns
 
 def gen_wordcloud(text:str):
-    # TODO: エラーハンドリング
+    # TODO: ディレクトリが無かった場合のエラーハンドリング
     font_path = os.getenv("FONT_PATH")
-    print(font_path)
 
     wordcloud = WordCloud(
         font_path=font_path,
@@ -36,11 +40,10 @@ def gen_wordcloud(text:str):
 
     return wordcloud.to_image()
 
-def image_to_byte_array(image:Image):
-    imgByteArr = io.BytesIO()
-    image.save(imgByteArr, format="PNG")
-    imgByteArr = imgByteArr.getvalue()
-    return imgByteArr
+def image_to_bytes(image:Image):
+    image_bytes = io.BytesIO()
+    image.save(image_bytes, format="PNG")
+    return image_bytes.getvalue()
 
 app = Flask(__name__)
 publisher = pubsub_v1.PublisherClient()
@@ -74,7 +77,7 @@ def index():
         PROJECT_ID,
         TOPIC_WORD_CLOUD_NAME)
 
-    data = image_to_byte_array(gen_wordcloud(text))
+    data = image_to_bytes(gen_wordcloud(parse_noun(text)))
     publisher.publish(topic_path, data=data)
 
     return ("", 204)

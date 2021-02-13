@@ -13,12 +13,18 @@ RUN apt-get update && \
     pip install Flask gunicorn google-cloud-pubsub wordcloud
 
 # mecabインストール
-## https://pypi.org/project/mecab-python3/
+## https://qiita.com/Sak1361/items/47e9ec464ccc770cd65c
 ## NOTE: 辞書はmecab-ipadic-neologdの方がよさそう。
-RUN pip install mecab-python3 unidic-lite && \
-    apt-get install mecab-ipadic-utf8 -y
+#RUN pip install mecab-python3 unidic-lite && \
+#    apt-get install mecab-ipadic-utf8 -y
+
+RUN apt-get install git make curl xz-utils file sudo mecab libmecab-dev mecab-ipadic mecab-ipadic-utf8 -y && \
+    git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git && \
+    cd mecab-ipadic-neologd && ./bin/install-mecab-ipadic-neologd -n -a -y && \
+    pip install mecab-python3 unidic-lite
 
 ENV FONT_PATH=/usr/share/fonts/truetype/fonts-japanese-gothic.ttf
+#ENV DICTIONARY_PATH=/usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd
 
 # Run the web service on container startup. Here we use the gunicorn
 # webserver, with one worker process and 8 threads.
