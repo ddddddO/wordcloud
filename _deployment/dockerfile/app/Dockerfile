@@ -14,10 +14,6 @@ RUN apt-get update && \
 
 # mecabインストール
 ## https://qiita.com/Sak1361/items/47e9ec464ccc770cd65c
-## NOTE: 辞書はmecab-ipadic-neologdの方がよさそう。
-#RUN pip install mecab-python3 unidic-lite && \
-#    apt-get install mecab-ipadic-utf8 -y
-
 RUN apt-get install git make curl xz-utils file sudo mecab libmecab-dev mecab-ipadic mecab-ipadic-utf8 -y && \
     git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git && \
     cd mecab-ipadic-neologd && ./bin/install-mecab-ipadic-neologd -n -a -y && \
